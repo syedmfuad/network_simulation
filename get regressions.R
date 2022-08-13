@@ -16,35 +16,6 @@ m2 <- glm(depvar ~ x2 + x3 + x4 + x5 + x6 + x7 + x8, family = poisson, data = pr
 summary(m2, exp = T)
 LL <- (2*7-1297.70)/2
 
-#random things with model
-
-hist(exp((predict(m2))))
-
-output <- matrix(ncol=14, nrow=nrow(prod_model))
-
-for(i in 1:nrow(prod_model)){
-  
-  output[i,1] = dpois(0, lambda=exp(predict(m2))[i])
-  output[i,2] = dpois(1, lambda=exp(predict(m2))[i])
-  output[i,3] = dpois(2, lambda=exp(predict(m2))[i])
-  output[i,4] = dpois(3, lambda=exp(predict(m2))[i])
-  output[i,5] = dpois(4, lambda=exp(predict(m2))[i])
-  output[i,6] = dpois(5, lambda=exp(predict(m2))[i])
-  output[i,7] = dpois(6, lambda=exp(predict(m2))[i])
-  output[i,8] = dpois(7, lambda=exp(predict(m2))[i])
-  output[i,9] = dpois(8, lambda=exp(predict(m2))[i])
-  output[i,10] = dpois(9, lambda=exp(predict(m2))[i])
-  output[i,11] = dpois(10, lambda=exp(predict(m2))[i])
-  output[i,12] = dpois(11, lambda=exp(predict(m2))[i])
-  output[i,13] = dpois(12, lambda=exp(predict(m2))[i])
-  output[i,14] = dpois(13, lambda=exp(predict(m2))[i])
-  
-}
-
-output <- as.data.frame(output) #data frame with probabilities for each outcome
-output$total <- rowSums(output[,c(1:14)])
-summary(output$total)
-
 #total number of papers (distribution)
 
 data <- read.csv("funding_new.csv")
@@ -58,21 +29,6 @@ for(i in 1:nrow(prod_model)){
 
 output <- rowSums(output)/(nrow(df)/nrow(data))
 hist(output, main="Distribution of new publications", xlab="New Publications") #number of publications
-
-#random things with poisson (graphs)
-
-freq(prod_model$depvar) #91.86% had no publications
-mean(prod_model$depvar) #average number of articles is 0.20
-
-mean(prod_model$depvar)^0 * exp(-mean(prod_model$depvar)) / factorial(0) #predicted prob of 0 articles is 0.82
-
-fr <- table(prod_model$depvar) %>% data.frame
-names(fr) <- c('articles', 'freq')
-fr$articles <- as.numeric(as.character(fr$articles)) #convert factor to numeric
-ggplot(fr, aes(x = articles, y = freq)) +
-  geom_col() + theme_bw() + lims(y = c(0, 2400)) + geom_line() + labs(x = "Number of articles", y = "Frequency") +
-  geom_text(aes(x = articles, y = freq, label = freq, vjust = -1)) +
-  theme(axis.title.y = element_text(angle = 0))
 
 ##################### MLOGIT ####################
 
@@ -118,27 +74,6 @@ for (i in 1:nrow(pred)){
 }
 
 entry_model$unif <- unif
-
-########## extra ##########
-
-unif <- matrix(NA,nrow(pred),1000)
-
-for (i in 1:nrow(pred)){
-  #random <- runif(1000, 0, 1)
-  unif[i,] <- runif(1000, 0, 1)
-}
-
-unif <- data.frame(unif)
-unif$pred <- entry_model$`3`
-
-for (i in 1:ncol(unif)){
-  #random <- runif(1000, 0, 1)
-  unif[,i] <- ifelse(unif$pred > unif[,i], 1, 0)
-}
-
-entry_model$unif <- rowMeans(unif[,1:1000])
-
-########## extra ##########
 
 entry_model$adding <- ifelse(entry_model$`3` > entry_model$unif, 1, 0)
 #entry_model$diff <- entry_model$`3`-entry_model$unif
@@ -206,31 +141,6 @@ for (i in 1:nrow(pred)){
 
 exit_model$unif <- unif
 
-
-
-########## extra ##########
-
-unif <- matrix(NA,nrow(pred),1000)
-
-for (i in 1:nrow(pred)){
-  #random <- runif(1000, 0, 1)
-  unif[i,] <- runif(1000, 0, 1)
-}
-
-unif <- data.frame(unif)
-unif$pred <- exit_model$pred
-
-for (i in 1:ncol(unif)){
-  #random <- runif(1000, 0, 1)
-  unif[,i] <- ifelse(unif$pred > unif[,i], 1, 0)
-}
-
-exit_model$unif <- rowMeans(unif[,1:1000])
-
-########## extra ##########
-
-
-
 #exit_model$unif <- pred$random <- runif(nrow(pred), 0, 1)
 exit_model$breaking <- ifelse(exit_model$pred > exit_model$unif, 1, 0)
 exit_model$who_exits <- exit_model$single_aut1*exit_model$breaking
@@ -244,7 +154,6 @@ for (i in 1:1000){
 }
 
 hist(new_exit, main="Distribution of exiting authors (nodes)", xlab="Exiting Authors")
-
 
 #we have to permanently remove some authors from dataframe
 #to do this, we first use the who_exits variable
