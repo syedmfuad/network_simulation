@@ -59,13 +59,17 @@ network <- igraph::graph_from_adjacency_matrix(a, mode='undirected', diag=F)
 plot(network, layout=igraph::layout.fruchterman.reingold, main="fruchterman.reingold", vertex.size=7.5) 
 #title("Original network")
 
-#after add but without connection
+dist <- distances(network)
+dist <- colMeans(dist)
+hist(dist)
+mean(dist)
 
-rest <- c((nrow(a)+1):(nrow(a)+round(mean(new_added))))
-network2 <- add.vertices(network, length(rest), attr = list(name = rest))
-plot(network2, layout=igraph::layout.sphere, main="sphere")
+transitivity(network, type="local")
+transitivity(network, type="localaverage")
 
-#after add and connection
+graph.density(network,loop=FALSE)
+
+################# AFTER ENTRY ##################
 
 list_est <- list()
 
@@ -85,11 +89,6 @@ list_est$papers_tog <- 1
 
 perm2 <- rbind(perm, list_est)
 
-########## only run if you want to exit before entering ##########
-#perm2 <- perm2[!(perm2$V1 %in% id_that_exit),]
-#perm2 <- perm2[!(perm2$V2 %in% id_that_exit),]
-########## only run if you want to exit before entering ##########
-
 #perm2 <- list_est
 
 a2 <- table(lapply(perm2[-3], factor, levels = sort(unique(unlist(perm2[-3])))))
@@ -101,33 +100,23 @@ network2 <- igraph::graph_from_adjacency_matrix(a2, mode='undirected', diag=F)
 #plot(network2, layout=igraph::layout.random, main="random", vertex.size=10)
 plot(network2, layout=igraph::layout.fruchterman.reingold, main="fruchterman.reingold", vertex.size=7.5)
 
-#after exit
+dist2 <- distances(network2)
+dist2 <- colMeans(dist2)
+hist(dist2)
+mean(dist2)
+
+transitivity(network2, type="local")
+transitivity(network2, type="localaverage")
+
+graph.density(network2,loop=FALSE)
+
+################# AFTER EXIT ##################
 
 perm_after_exit <- perm2[!(perm2$V1 %in% id_that_exit),]
 perm_after_exit <- perm_after_exit[!(perm_after_exit$V2 %in% id_that_exit),]
 perm_after_exit$papers_tog <- NULL
 perm_after_exit <- perm_after_exit %>%
   rename(aut1 = V1, aut2=V2)
-
-########## old stuff ###########
-
-#after_exit <- subset(exit_model, breaking==1) #was exit_model, i'm now changing it to model_after_exit
-#after_exit <- model_after_exit
-#unique_id <- paste(after_exit$aut1, after_exit$aut2)
-#id <- data.frame(unique_id=unique_id)
-#perm2$unique_id <- paste(perm2$V1, perm2$V2)
-
-#perm_after_exit <- perm2[(perm2$unique_id %in% id$unique_id),]
-#perm_after_exit <- data.frame(V1=perm_after_exit)
-#perm_after_exit %>% rename(V1 = V1.V1, V2 = V1.V2, papers_tog = V1.papers_tog, unique_id = V1.unique_id) -> perm_after_exit
-#perm_after_exit <- perm_after_exit %>% separate(V1, c('aut1', 'aut2'))
-#perm_after_exit$aut1 <- as.numeric(perm_after_exit$aut1)
-#perm_after_exit$aut2 <- as.numeric(perm_after_exit$V2)
-#perm_after_exit$V2 <- NULL
-#perm_after_exit$papers_tog <- NULL
-#perm_after_exit$unique_id <- NULL
-
-########## old stuff ###########
 
 a3 <- table(lapply(perm_after_exit, factor, levels = sort(unique(unlist(perm_after_exit)))))
 a3[lower.tri(a3)] <- t(a3)[lower.tri(a3)]
@@ -137,6 +126,18 @@ plot(network3, layout=igraph::layout.random, main="random", vertex.size=10)
 plot(network3, layout=igraph::layout.fruchterman.reingold, main="fruchterman.reingold", vertex.size=7.5, vertex.color="#0000FF25",
      edge.arrow.size = 0.09)
 #igraph::tkplot(network3)
+
+dist3 <- distances(network3)
+dist3 <- colMeans(dist3)
+hist(dist3)
+mean(dist3)
+
+transitivity(network3, type="local")
+transitivity(network3, type="localaverage")
+
+graph.density(network3,loop=FALSE)
+
+################# FEATURE INCLUSION ##################
 
 #as_data_frame(network2, what = "edges")
 

@@ -16,7 +16,14 @@ library(nnet)
 #binary variable for important papers
 #another x variable for every author combination denoting total number of papers coauthored by them #this is the fckin dep var!!!
 
-data <- read.csv("funding_new.csv")
+data <- read.csv("funding_new_temp.csv")
+data <- data[c(1:85),]
+data$Author_order <- NULL
+data$Important <- NULL
+data$Is_PI <- NULL
+data$PI_Affil <- NULL
+data$Funder <- NULL
+data$Funder_Country <- NULL
 
 #data <- final_df
 
