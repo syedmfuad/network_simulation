@@ -25,6 +25,15 @@ data$PI_Affil <- NULL
 data$Funder <- NULL
 data$Funder_Country <- NULL
 
+
+data <- read.csv("funding_new.csv")
+data$PI_Affil <- as.factor(data$PI_Affil)
+data$PI_Affil1 <- ifelse(data$PI_Affil == "Academic", 1, 0)
+
+data$Funder_Country <- as.factor(data$Funder_Country)
+summary(data$Funder_Country)
+data$Funder_Country1 <- ifelse(data$Funder_Country == "America", 1, 0)
+
 #data <- final_df
 
 authors <- c(unique(data$MA), unique(data$A1), unique(data$A2), unique(data$A3), unique(data$A4), 
@@ -35,13 +44,20 @@ authors <- authors[authors != ""] #gets list of unique authors
 
 data_sub <- select(data, MA, A1, A2, A3, A4, A5, A6, A7)
 
+pi <- c(unique(data$PI1), unique(data$PI2), unique(data$PI3), unique(data$PI4), unique(data$PI5), unique(data$PI6))
+
+pi <- unique(pi)
+pi <- pi[pi != ""] #gets list of unique authors
+
+data_pi <- select(data, PI1, PI2, PI3, PI4, PI5, PI6)
+
 x <- c(1:length(authors))
 n <- length(x)
 m <- 2
 
 perm <- CombSet(x, m, repl=FALSE, ord=FALSE) #gets unique combination sets (permutation/combination)
 
-x_var=matrix(NA,nrow(perm),7) #empty matrix for x-variables
+x_var=matrix(NA,nrow(perm),13) #empty matrix for x-variables
 
 for(i in 1:nrow(perm)){
   
@@ -57,7 +73,7 @@ for(i in 1:nrow(perm)){
   
   papers_total <- length(unique(c(a[,1], b[,1]))) #total number of unique papers authored by aut1 and aut2 (may not be coauthored)
   
-  #funding
+  #average funding per paper
   
   ab <- unique(c(a[,1],b[,1])) #list of unique paper IDs authored by aut1 and aut2
   
@@ -65,7 +81,67 @@ for(i in 1:nrow(perm)){
   fund_sub <- unique(fund_sub[ab,])
   
   fund_sub <- as.numeric(fund_sub)
-  total_fund <- sum(fund_sub, na.rm=TRUE)/length(ab) #average funds ($) of all projects with aut1 and aut2
+  avg_fund <- sum(fund_sub, na.rm=TRUE)/length(ab) #average funds ($) of all projects with aut1 and aut2
+  
+  #total common funding by authors
+  
+  a <- which(data_pi == authors[aut1], arr.ind = TRUE) #list of paper IDs authored by aut1
+  b <- which(data_pi == authors[aut2], arr.ind = TRUE) #list of paper IDs authored by aut2
+  
+  ab <- intersect(a[,1],b[,1]) #list of unique paper IDs authored by aut1 and aut2
+  
+  fund_sub <- select(data, Fund)
+  fund_sub <- unique(fund_sub[ab,])
+  
+  fund_sub <- as.numeric(fund_sub)
+  total_c_fund <- sum(fund_sub, na.rm=TRUE) #total common funds ($) of all projects with aut1 and aut2
+  
+  #total individual funding #NEW
+  
+  a <- which(data_pi == authors[aut1], arr.ind = TRUE) #list of paper IDs authored by aut1
+  b <- which(data_pi == authors[aut2], arr.ind = TRUE) #list of paper IDs authored by aut2
+  
+  ab <- unique(c(a[,1],b[,1])) #list of unique paper IDs coauthored by aut1 and aut2
+  
+  fund_sub <- select(data, Fund)
+  fund_sub <- unique(fund_sub[ab,])
+  
+  fund_sub <- as.numeric(fund_sub)
+  total_i_fund <- sum(fund_sub, na.rm=TRUE) #total individual funds ($) of all projects with aut1 and aut2
+  
+  
+  
+  #total papers where they are coauthors together
+  
+  a <- which(data_sub == authors[aut1], arr.ind = TRUE) #list of paper IDs authored by aut1
+  b <- which(data_sub == authors[aut2], arr.ind = TRUE) #list of paper IDs authored by aut2
+  
+  #average citation (NEW)
+  
+  ab1 <- unique(c(a[,1],b[,1])) #list of unique paper IDs authored by aut1 and aut2
+  ab2 <- intersect(a[,1],b[,1]) #list of unique paper IDs coauthored by aut1 and aut2
+  
+  cite_sub <- select(data, Citations)
+  cite_sub1 <- unique(cite_sub[ab1,])
+  cite_sub1 <- as.numeric(cite_sub1)
+  
+  cite_sub2 <- unique(cite_sub[ab2,])
+  cite_sub2 <- as.numeric(cite_sub2)
+  
+  avg_cite1 <- sum(cite_sub1, na.rm=TRUE)/length(ab1) #average citations of all papers authored by aut1 and aut2
+  avg_cite2 <- sum(cite_sub2, na.rm=TRUE)/length(ab2) #average citations of all papers coauthored by aut1 and aut2
+  
+  #total citation by author (NEW)
+  
+  cite_sub1 <- unique(cite_sub[a,])
+  cite_sub1 <- as.numeric(cite_sub1)
+  
+  cite_sub2 <- unique(cite_sub[b,])
+  cite_sub2 <- as.numeric(cite_sub2)
+  
+  total_cite1 <- sum(cite_sub1, na.rm=TRUE) #average citations of all papers authored by aut1 and aut2
+  total_cite2 <- sum(cite_sub2, na.rm=TRUE) #average citations of all papers coauthored by aut1 and aut2
+  
   
   #first step relationships
   
@@ -178,13 +254,49 @@ for(i in 1:nrow(perm)){
   
   only_new <- length(unique(c(only_a, only_b))) #total number of new authors introduced by aut1 and aut2
   
+  #citation (NEW)
+  
+  
+  
+  
+  #average funding per paper
+  
+  a <- which(data_sub == authors[aut1], arr.ind = TRUE) #list of paper IDs authored by aut1
+  b <- which(data_sub == authors[aut2], arr.ind = TRUE) #list of paper IDs authored by aut2
+  
+  ab <- unique(c(a[,1],b[,1])) #list of unique paper IDs authored by aut1 and aut2
+  
+  imp_sub <- select(data, Important)
+  imp_sub <- imp_sub[ab,]
+  
+  avg_imp_t <- sum(imp_sub, na.rm=TRUE)/length(ab) #average funds ($) of all projects with aut1 and aut2
+  
+  #total common funding by authors
+  
+  ab <- intersect(a[,1],b[,1]) #list of unique paper IDs authored by aut1 and aut2
+  
+  imp_sub <- select(data, Important)
+  imp_sub <- imp_sub[ab,]
+  
+  avg_imp_c <- sum(imp_sub, na.rm=TRUE)/length(ab) #average funds ($) of all projects with aut1 and aut2
+  
+  
+  
+  
+  
   x_var[i,1]=papers_tog
   x_var[i,2]=papers_total
-  x_var[i,3]=total_fund
-  x_var[i,4]=total_f_d
-  x_var[i,5]=total_s_d
-  x_var[i,6]=ca
-  x_var[i,7]=only_new
+  x_var[i,3]=avg_fund
+  x_var[i,4]=total_c_fund
+  x_var[i,5]=total_i_fund
+  x_var[i,6]=avg_cite1
+  x_var[i,7]=avg_cite2
+  x_var[i,8]=total_cite1
+  x_var[i,9]=total_cite2
+  x_var[i,10]=total_f_d
+  x_var[i,11]=total_s_d
+  x_var[i,12]=ca
+  x_var[i,13]=only_new
   
 }
 
@@ -206,12 +318,14 @@ for (i in 1:nrow(depvar)){
 x_var_df <- as.data.frame(x_var)
 prod_model <- cbind(x_var_df, depvar) #merge depvar with x-variables
 
-colnames(prod_model) <- c("depvar", "x1", "x2", "x3", "x4", "x5", "x6", "aut1", "aut2", "autname1", "autname2")
+colnames(prod_model) <- c("depvar", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "aut1", "aut2", "autname1", "autname2")
 
 prod_model$concat <- paste(prod_model$autname1, prod_model$autname2, sep=" ")
 
-prod_model$x7 <- (prod_model$x2)^2
-prod_model$x8 <- (prod_model$x3)*(prod_model$x4)
+prod_model$x13 <- (prod_model$x2)^2
+prod_model$x14 <- (prod_model$x9)*(prod_model$x10)
+
+prod_model$x6[is.nan(prod_model$x6)]<-0
 
 rm(list=setdiff(ls(), c("prod_model", "data")))
 
@@ -534,7 +648,10 @@ exit_model$concat2 <- NULL
 rm(list=setdiff(ls(), c("prod_model", "df", "mlogit", "entry_model", "exit_model", "data")))
 
 
+#checking data
 
+prod_model_check <- prod_model %>% select(-c(aut1, aut2, autname1, autname2, concat))
+cor(prod_model_check)
 
-
-
+exit_model_check <- exit_model %>% select(-c(aut1, aut2, autname1, autname2, concat))
+cor(exit_model_check)
