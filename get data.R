@@ -57,7 +57,7 @@ m <- 2
 
 perm <- CombSet(x, m, repl=FALSE, ord=FALSE) #gets unique combination sets (permutation/combination)
 
-x_var=matrix(NA,nrow(perm),13) #empty matrix for x-variables
+x_var=matrix(NA,nrow(perm),19) #empty matrix for x-variables
 
 for(i in 1:nrow(perm)){
   
@@ -254,12 +254,9 @@ for(i in 1:nrow(perm)){
   
   only_new <- length(unique(c(only_a, only_b))) #total number of new authors introduced by aut1 and aut2
   
-  #citation (NEW)
+  #important (NEW)
   
-  
-  
-  
-  #average funding per paper
+  #average importance of all papers
   
   a <- which(data_sub == authors[aut1], arr.ind = TRUE) #list of paper IDs authored by aut1
   b <- which(data_sub == authors[aut2], arr.ind = TRUE) #list of paper IDs authored by aut2
@@ -269,19 +266,52 @@ for(i in 1:nrow(perm)){
   imp_sub <- select(data, Important)
   imp_sub <- imp_sub[ab,]
   
-  avg_imp_t <- sum(imp_sub, na.rm=TRUE)/length(ab) #average funds ($) of all projects with aut1 and aut2
+  avg_imp_t <- sum(imp_sub, na.rm=TRUE)/length(ab) #average importance of all papers with aut1 and aut2
   
-  #total common funding by authors
+  #average common importance of authors
   
   ab <- intersect(a[,1],b[,1]) #list of unique paper IDs authored by aut1 and aut2
   
   imp_sub <- select(data, Important)
   imp_sub <- imp_sub[ab,]
   
-  avg_imp_c <- sum(imp_sub, na.rm=TRUE)/length(ab) #average funds ($) of all projects with aut1 and aut2
+  avg_imp_c <- sum(imp_sub, na.rm=TRUE)/length(ab) #average importance of all common papers with aut1 and aut2
   
+  #PI affiliation
   
+  ab <- unique(c(a[,1],b[,1])) #list of unique paper IDs authored by aut1 and aut2
   
+  pi_sub <- select(data, PI_Affil1)
+  pi_sub <- pi_sub[ab,]
+  
+  avg_pi_t <- sum(pi_sub, na.rm=TRUE)/length(ab) #average PI affiliation of all papers with aut1 and aut2
+  
+  #average common PI affiliation of authors
+  
+  ab <- intersect(a[,1],b[,1]) #list of unique paper IDs authored by aut1 and aut2
+  
+  pi_sub <- select(data, PI_Affil1)
+  pi_sub <- pi_sub[ab,]
+  
+  avg_pi_c <- sum(pi_sub, na.rm=TRUE)/length(ab) #average PI affiliation of all common papers with aut1 and aut2
+  
+  #Funder affiliation
+  
+  ab <- unique(c(a[,1],b[,1])) #list of unique paper IDs authored by aut1 and aut2
+  
+  fc_sub <- select(data, Funder_Country1)
+  fc_sub <- fc_sub[ab,]
+  
+  avg_fc_t <- sum(fc_sub, na.rm=TRUE)/length(ab) #average funder affiliation of all papers with aut1 and aut2
+  
+  #average common funder affiliation of authors
+  
+  ab <- intersect(a[,1],b[,1]) #list of unique paper IDs authored by aut1 and aut2
+  
+  fc_sub <- select(data, Funder_Country1)
+  fc_sub <- fc_sub[ab,]
+  
+  avg_fc_c <- sum(fc_sub, na.rm=TRUE)/length(ab) #average funder affiliation of all common papers with aut1 and aut2
   
   
   x_var[i,1]=papers_tog
@@ -297,6 +327,13 @@ for(i in 1:nrow(perm)){
   x_var[i,11]=total_s_d
   x_var[i,12]=ca
   x_var[i,13]=only_new
+  
+  x_var[i,14]=avg_imp_t
+  x_var[i,15]=avg_imp_c
+  x_var[i,16]=avg_pi_t
+  x_var[i,17]=avg_pi_c
+  x_var[i,18]=avg_fc_t
+  x_var[i,19]=avg_fc_c
   
 }
 
@@ -318,14 +355,19 @@ for (i in 1:nrow(depvar)){
 x_var_df <- as.data.frame(x_var)
 prod_model <- cbind(x_var_df, depvar) #merge depvar with x-variables
 
-colnames(prod_model) <- c("depvar", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "aut1", "aut2", "autname1", "autname2")
+colnames(prod_model) <- c("depvar", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", 
+                          "x13", "x14", "x15", "x16", "x17", "x18", 
+                          "aut1", "aut2", "autname1", "autname2")
 
 prod_model$concat <- paste(prod_model$autname1, prod_model$autname2, sep=" ")
 
-prod_model$x13 <- (prod_model$x2)^2
-prod_model$x14 <- (prod_model$x9)*(prod_model$x10)
+prod_model$x19 <- (prod_model$x2)^2
+prod_model$x20 <- (prod_model$x9)*(prod_model$x10)
 
 prod_model$x6[is.nan(prod_model$x6)]<-0
+prod_model$x14[is.nan(prod_model$x14)]<-0
+prod_model$x16[is.nan(prod_model$x16)]<-0
+prod_model$x18[is.nan(prod_model$x18)]<-0
 
 rm(list=setdiff(ls(), c("prod_model", "data")))
 
