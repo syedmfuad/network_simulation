@@ -3,6 +3,7 @@ library(dplyr)
 library(tidyr)
 library(DescTools)
 library(nnet)
+library(igraph)
 
 #library(dplyr) #basic data management & %>%
 #library(MASS) #for negative bin regression
@@ -23,6 +24,7 @@ authors <- c(unique(data$MA), unique(data$A1), unique(data$A2), unique(data$A3),
              unique(data$A4), unique(data$A5), unique(data$A6), unique(data$A7))
 authors <- unique(authors)
 authors <- authors[authors != ""] #gets list of unique authors
+authors<-authors[!is.na(authors)]
 data_sub <- select(data, MA, A1, A2, A3, A4, A5, A6, A7)
 
 x <- c(1:length(authors))
@@ -56,7 +58,8 @@ a <- matrix(a, ncol = ncol(a), dimnames = dimnames(a))
 network <- igraph::graph_from_adjacency_matrix(a, mode='undirected', diag=F)
 #plot(network, layout=igraph::layout.sphere, main="sphere")
 #plot(network, layout=igraph::layout.random, main="random", vertex.size=10)
-plot(network, layout=igraph::layout.fruchterman.reingold, main="fruchterman.reingold", vertex.size=7.5) 
+plot(network, layout=igraph::layout.fruchterman.reingold, main="Static Network", vertex.size=7.5, vertex.size=7.5, vertex.color="#0000FF25",
+     edge.arrow.size = 0.09, edge.width=E(network)$Weight) 
 #title("Original network")
 
 dist <- distances(network)
@@ -196,9 +199,9 @@ how_many$share_coauthor <- how_many$X5/sum(how_many$X5)
 how_many$new_pub <- round(how_many$share_pub*(mean(output)))
 how_many$new_coauthor <- round(how_many$share_coauthor*(mean(new_added)))
 
-new_df <- merge(left, right, all.x=TRUE)
+#new_df <- merge(left, right, all.x=TRUE)
 
-g <- perm_only_new %>% group_by(aut1) %>% summarise(aut1=n(aut2))
+#g <- perm_only_new %>% group_by(aut1) %>% summarise(aut1=n(aut2))
 
 perm_only_new$paper_id <- NA
 
@@ -310,15 +313,17 @@ final_df[] <- lapply(final_df, function(x) paste("A", x, sep=""))
 
 final_df[final_df == "ANA" ] <- NA
 
+set.seed(12345)
+
 final_df$Index <- 1:nrow(final_df)
 final_df$Year <- sample(c(2006:2020), replace=TRUE, size=nrow(final_df))
-final_df$Fund <- sample(c(100000, 200000, 300000, 400000, 500000, 600000, 700000), size=nrow(final_df), replace=TRUE)
+final_df$Fund <- sample(c(100000,0), size=nrow(final_df), replace=TRUE, prob = c(5/nrow(final_df), (nrow(final_df)-5)/nrow(final_df)))
 final_df$Paper <- paste("P", final_df$Index)
 final_df$Citations <- sample(c(0:50), replace=TRUE, size=nrow(final_df))
 
 final_df[is.na(final_df)] <- "" 
 
-write.csv(final_df, file="funding_new.csv")  
+write.csv(final_df, file="funding_new.csv")
 
 
 
@@ -326,72 +331,132 @@ write.csv(final_df, file="funding_new.csv")
 
 
 
-data <- read.csv("funding_org.csv")
-authors <- c(unique(data$MA), unique(data$A1), unique(data$A2), unique(data$A3), 
-             unique(data$A4), unique(data$A5), unique(data$A6), unique(data$A7))
+
+
+
+
+
+
+data <- read.csv("funding_new.csv")
+
+#data <- final_df
+
+authors <- c(unique(data$MA), unique(data$A1), unique(data$A2), unique(data$A3), unique(data$A4), 
+             unique(data$A5), unique(data$A6), unique(data$A7))
+
 authors <- unique(authors)
 authors <- authors[authors != ""] #gets list of unique authors
+
 data_sub <- select(data, MA, A1, A2, A3, A4, A5, A6, A7)
 
 x <- c(1:length(authors))
 n <- length(x)
 m <- 2
 
-perm <- CombSet(x, m, repl=FALSE, ord=FALSE) #gets unique combination sets
+perm <- CombSet(x, m, repl=FALSE, ord=FALSE) #gets unique combination sets (permutation/combination)
 
-estimate=matrix(NA,nrow(perm),1)
+x_var=matrix(NA,nrow(perm),1) #empty matrix for x-variables
 
 for(i in 1:nrow(perm)){
   
-  aut1 <- perm[i, 1] #gets the first element of first set
-  aut2 <- perm[i, 2] #gets the second element of first set
-  a <- which(data_sub == authors[aut1], arr.ind = TRUE) #list of paper authored by aut1
-  b <- which(data_sub == authors[aut2], arr.ind = TRUE) #list of paper authored by aut2
-  papers_tog <- length(intersect(a[,1], b[,1])) #number of unique papers coauthored by aut1 and aut2
-  estimate[i]=papers_tog
+  aut1 <- perm[i, 1] #gets the first element of first combination set
+  aut2 <- perm[i, 2] #gets the second element of first combination set
+  
+  #total papers where they are coauthors together
+  
+  a <- which(data_sub == authors[aut1], arr.ind = TRUE) #list of paper IDs authored by aut1
+  b <- which(data_sub == authors[aut2], arr.ind = TRUE) #list of paper IDs authored by aut2
+  
+  papers_tog <- length(intersect(a[,1], b[,1])) #total number of unique papers coauthored by aut1 and aut2
+  
+  papers_total <- length(unique(c(a[,1], b[,1]))) #total number of unique papers authored by aut1 and aut2 (may not be coauthored)
+  
+  #first step relationships
+  
+  a1 <- data_sub[a[,1],]
+  a1 <- unlist(a1)
+  a1 <- unique(a1)
+  a1 <- a1[a1 != authors[aut1]] #all coauthor names of aut1
+  
+  b1 <- data_sub[b[,1],]
+  b1 <- unlist(b1)
+  b1 <- unique(b1)
+  b1 <- b1[b1 != authors[aut2]] #all coauthor names of aut2
+  
+  total_f_d <- c(a1, b1)
+  total_f_d <- unique(total_f_d)
+  total_f_d <- length(total_f_d) #total number of unique coauthors of aut1 and aut2
+  
+  x_var[i,1]=papers_tog
   
 }
 
-perm <- as.data.frame(perm)
-perm$papers_tog <- estimate
-perm$papers_tog <- ifelse(perm$papers_tog > 0, 1, 0)
-perm <- subset(perm, papers_tog==1)
+depvar <- as.data.frame(perm) #getting dependent variable #number of papers by each pair
 
-a <- table(lapply(perm[-3], factor, levels = sort(unique(unlist(perm[-3])))))
-a[lower.tri(a)] <- t(a)[lower.tri(a)]
-a <- matrix(a, ncol = ncol(a), dimnames = dimnames(a))
-
-network <- graph_from_adjacency_matrix(a, mode='undirected', diag=F)
-plot(network, layout=layout.sphere, main="sphere")
-plot(network, layout=layout.random, main="random")
-
-
-
-
-
-
-n=20                          # Size of matrix
-mat=matrix(0,ncol=n,nrow=n)   # Create a n x n matrix with zeros
-mat[5:14,10]=1                # Add 10 live cells
-temp_mat=mat                  # Create a temporary matrix
-image(t(apply(mat, 2, rev)),col=c("grey50","seagreen1"),yaxt="n",xaxt="n") # Plot image
-grid(nx=n,ny=n,col="grey70",lty=1)
-mat1=mat[c(2:n,1),];mat2=mat[c(n,1:n-1),]; mat3=mat[,c(2:n,1)]; mat4=mat[,c(n,1:n-1)]; mat5=mat[c(2:n,1),c(2:n,1)]; mat6=mat[c(2:n,1),c(n,1:n-1)]
-mat7=mat[c(n,1:n-1),c(n,1:n-1)];mat8=mat[c(n,1:n-1),c(2:n,1)];
-for (k in 1:200){      # Repeat 200 times
-  numb_alive=mat1+mat2+mat3+mat4+mat5+mat6+mat7+mat8
-  temp_mat[mat==1 & numb_alive<2]=0
-  temp_mat[mat==1 & numb_alive>3]=0
-  temp_mat[mat==1 & (numb_alive==2 | numb_alive==3)]=1
-  temp_mat[mat==0 & numb_alive==3]=1
-  mat=temp_mat # Update matrix
-  mat1=mat[c(2:n,1),];mat2=mat[c(n,1:n-1),];mat3=mat[,c(2:n,1)];mat4=mat[,c(n,1:n-1)]
-  mat5=mat[c(2:n,1),c(2:n,1)];mat6=mat[c(2:n,1),c(n,1:n-1)];mat7=mat[c(n,1:n-1),c(2:n,1)]
-  mat8=mat[c(n,1:n-1),c(n,1:n-1)]
-  image(t(apply(mat, 2, rev)),col=c("grey50","seagreen1"),add=TRUE)   # Plot image
-  grid(nx=n,ny=n,col="grey70",lty=1)
-  Sys.sleep(0.5) # To see changes on the screen we need to pause the loop
+for (i in 1:nrow(depvar)){
+  
+  j <- depvar[i,1]
+  depvar[i,3] <- authors[j]
+  
+  k <- depvar[i,2]
+  depvar[i,4] <- authors[k]
+  
 }
+
+x_var_df <- as.data.frame(x_var)
+prod_model <- cbind(x_var_df, depvar)
+
+colnames(prod_model)[1] <- "Pub"
+
+prod_model %>% 
+  arrange(desc(Pub)) %>%  slice(1:5) -> new_model
+
+
+
+
+
+#perm <- unique(c(new_model$V3, new_model$V4))
+
+my_vec <- c()
+
+for(i in 1:nrow(new_model)){
+  
+  aut1 <- new_model$V3[i] #gets the first element of first combination set
+  aut2 <- new_model$V4[i] #gets the second element of first combination set
+  
+  #total papers where they are coauthors together
+  
+  a <- which(data_sub == aut1, arr.ind = TRUE) #list of paper IDs authored by aut1
+  b <- which(data_sub == aut2, arr.ind = TRUE) #list of paper IDs authored by aut2
+  
+  papers_tog <- (intersect(a[,1], b[,1])) #total number of unique papers coauthored by aut1 and aut2
+  
+  print(papers_tog)
+  
+  my_vec <- c(my_vec, papers_tog)
+  my_vec <- unique(my_vec)
+  
+  #papers_total <- length(unique(c(a[,1], b[,1]))) #total number of unique papers authored by aut1 and aut2 (may not be coauthored)
+  
+}
+
+new_model <- data.frame(Index=my_vec, Fund=100000)
+
+new_data <- merge(data, new_model, by="Index", all.x=TRUE)
+
+new_data$Fund.x <- NULL
+
+names(new_data)[names(new_data) == "Fund.y"] <- "Fund"
+new_data$Fund[is.na(new_data$Fund)] <- 0
+
+write.csv(new_data, file="funding_new.csv")
+
+
+
+
+
+
+
 
 
 
